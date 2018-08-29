@@ -132,3 +132,37 @@ func (chain *Chain) Generate(current NGram) (string, error) {
 	}
 	return "", nil
 }
+
+type WordProb struct {
+	Word        string
+	Probability float64
+}
+
+func (chain *Chain) HighestProbNext(current NGram) ([]WordProb, error) {
+	if len(current) != chain.Order {
+		return nil, errors.New("N-gram length does not match chain order")
+	}
+	currentIndex, currentExists := chain.statePool.get(current.key())
+	if !currentExists {
+		return nil, fmt.Errorf("Unknown ngram %v", current)
+	}
+	arr := chain.frequencyMat[currentIndex]
+	sum := arr.sum()
+	max := 0
+	for _, count := range arr {
+		if count > max {
+			max = count
+		}
+	}
+	probability := float64(max) / float64(sum)
+	var probs []WordProb
+	for index, count := range arr {
+		if count == max {
+			probs = append(probs, WordProb{
+				chain.statePool.intMap[index],
+				probability,
+			})
+		}
+	}
+	return probs, nil
+}
